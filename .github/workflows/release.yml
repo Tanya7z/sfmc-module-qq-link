@@ -1,0 +1,193 @@
+name: Release
+
+on:
+  # 手动触发：Actions 页面 Run workflow，可选版本号（默认 patch）
+  workflow_dispatch:
+    inputs:
+      bump:
+        description: "Semver bump level (patch | minor | major | custom)"
+        required: true
+        default: "patch"
+        type: choice
+        options: [patch, minor, major, custom]
+      custom_version:
+        description: "当 bump=custom 时使用（如 2.0.0-rc.1）"
+        required: false
+        type: string
+      dry_run:
+        description: "打 tgz 上传为 artifacts"
+        required: false
+        default: false
+        type: boolean
+
+  # 自动触发：push tag（非 dispatch 推送的 chore(release) 提交）
+  push:
+    tags: ["v*.*.*", "v*.*.*-*"]
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: write # 创建 / 推送 git tag
+  id-token: write # npm Trusted Publishing（OIDC）
+  pull-requests: write # 自动开 PR 到 sfmc-modules
+
+jobs:
+  release:
+    name: Build + Publish + Index PR
+    runs-on: ubuntu-latest
+    # dispatch 推 tag 会再触发 push.tags；跳过 chore(release) 提交上的二次 job，避免双 publish
+    if: >-
+      github.event_name != 'push' ||
+      !startsWith(github.event.head_commit.message, 'chore(release):')
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22.13"
+          registry-url: "https://registry.npmjs.org/"
+
+      - name: 准备 bump 版本
+        id: bump
+        run: |
+          if [[ "${{ github.event_name }}" == "push" ]]; then
+            VERSION=${GITHUB_REF#refs/tags/v}
+            echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+            echo "→ tag 触发：版本 $VERSION"
+          else
+            LEVEL="${{ inputs.bump }}"
+            CURRENT=$(node -p "require('./package.json').version")
+            case "$LEVEL" in
+              patch) VERSION=$(node -e "const [a,b,c]=require('./package.json').version.split('.').map(Number);console.log([a,b,c+1].join('.'))") ;;
+              minor) VERSION=$(node -e "const [a,b,c]=require('./package.json').version.split('.').map(Number);console.log([a,b+1,0].join('.'))") ;;
+              major) VERSION=$(node -e "const [a,b,c]=require('./package.json').version.split('.').map(Number);console.log([a+1,0,0].join('.'))") ;;
+              custom)
+                VERSION="${{ inputs.custom_version }}"
+                if [[ -z "$VERSION" ]]; then
+                  echo "bump=custom 时必须填写 custom_version（如 2.0.0-rc.1）"
+                  exit 1
+                fi
+                ;;
+              *) echo "未知 bump level: $LEVEL"; exit 1 ;;
+            esac
+            echo "→ dispatch 触发：bump $CURRENT → $VERSION"
+            echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          fi
+          VERSION="$VERSION" node -e "const fs=require('fs');const p=JSON.parse(fs.readFileSync('package.json','utf8'));p.version=process.env.VERSION;fs.writeFileSync('package.json',JSON.stringify(p,null,2)+'\n')"
+
+      - name: 安装依赖 + 校验
+        run: |
+          npm ci
+          npm run typecheck
+          npm test
+
+      - name: 打包 tgz
+        run: npm pack
+
+      - name: 推 git tag（dispatch 触发时）
+        if: github.event_name == 'workflow_dispatch' && inputs.dry_run != true
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add package.json
+          git commit -m "chore(release): bump to v${{ steps.bump.outputs.version }}"
+          git tag "v${{ steps.bump.outputs.version }}"
+          git push origin HEAD
+          git push origin "v${{ steps.bump.outputs.version }}"
+
+      - name: 上传 tgz 为 artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: module-tgz-${{ steps.bump.outputs.version }}
+          path: "*.tgz"
+          retention-days: 14
+
+      # npm publish：优先 Trusted Publishing（OIDC）；secrets.NPM_TOKEN 作兜底。
+      # 无 token 时不要写入空 _authToken，以免干扰 OIDC Trusted Publishing。
+      - name: Publish 到 npm
+        if: inputs.dry_run != true
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+        run: |
+          if [[ -n "${NODE_AUTH_TOKEN}" ]]; then
+            echo "→ 使用 NPM_TOKEN fallback"
+            npm config set //registry.npmjs.org/:_authToken "${NODE_AUTH_TOKEN}"
+          else
+            echo "→ 使用 npm Trusted Publishing（OIDC）；不写空 _authToken"
+          fi
+          npm publish --access public --provenance
+
+      # 社区作者：默认推到「本账号下的 sfmc-modules fork」，再对 Tanya7z/sfmc-modules 开 PR。
+      # 官方仓：设 repo variable SFMC_INDEX_REPO=Tanya7z/sfmc-modules 即可直推 upstream 分支并开 PR。
+      # WORKFLOW_PAT 需能写 fork（或 upstream）并有开 PR 权限。
+      - name: 在 sfmc-modules 开 index PR
+        if: inputs.dry_run != true && success()
+        env:
+          GH_TOKEN: ${{ secrets.WORKFLOW_PAT }}
+          PKG_NAME: ${{ github.event.repository.name }}
+          PKG_VERSION: ${{ steps.bump.outputs.version }}
+          INDEX_UPSTREAM: Tanya7z/sfmc-modules
+          INDEX_REPO: ${{ vars.SFMC_INDEX_REPO || format('{0}/sfmc-modules', github.repository_owner) }}
+        run: |
+          if [[ -z "${GH_TOKEN}" ]]; then
+            echo "→ WORKFLOW_PAT 未配；跳过 index PR"
+            exit 0
+          fi
+          BRANCH="publish/${PKG_NAME}-${PKG_VERSION}"
+          WORKDIR=$(mktemp -d)
+
+          if ! gh repo view "${INDEX_REPO}" >/dev/null 2>&1; then
+            if [[ "${INDEX_REPO}" == "${INDEX_UPSTREAM}" ]]; then
+              echo "→ 无法访问 ${INDEX_REPO}；请检查 WORKFLOW_PAT 权限"
+              exit 1
+            fi
+            echo "→ ${INDEX_REPO} 不存在，尝试 fork ${INDEX_UPSTREAM}"
+            gh repo fork "${INDEX_UPSTREAM}" --clone=false --default-branch-only
+          fi
+
+          gh repo clone "${INDEX_REPO}" "${WORKDIR}" -- --depth=1
+          cd "${WORKDIR}"
+          NPM_NAME=$(node -p "require('${{ github.workspace }}/package.json').name")
+          FOLDER_ID=$(node -e "const n=require('${{ github.workspace }}/package.json').name;const m=String(n).match(/^(?:@[^/]+\\/)?(?:sfmc-)?module-(.+)$/);console.log(m?m[1]:'${PKG_NAME}')")
+          git checkout -b "${BRANCH}"
+          node -e '
+            const fs=require("fs");
+            let p={version:2,modules:{}};
+            if (fs.existsSync("index.json")) p=JSON.parse(fs.readFileSync("index.json","utf8"));
+            const modules = (p.modules && !Array.isArray(p.modules)) ? {...p.modules} : {};
+            const id=process.argv[1]; const npm=process.argv[2]; const ver=process.argv[3];
+            modules[id] = { npm, version: ver, sdk: ">=0.2.0", timestamp: Date.now() };
+            const sorted = {};
+            for (const k of Object.keys(modules).sort()) sorted[k] = modules[k];
+            fs.writeFileSync("index.json", JSON.stringify({ version: 2, modules: sorted }, null, 2) + "\n");
+          ' "${FOLDER_ID}" "${NPM_NAME}" "${PKG_VERSION}"
+          git add index.json
+          git -c user.name="github-actions[bot]" -c user.email="github-actions[bot]@users.noreply.github.com" \
+            commit -m "chore(index): ${FOLDER_ID}@${PKG_VERSION}" || true
+          git push -u "https://x-access-token:${GH_TOKEN}@github.com/${INDEX_REPO}.git" "${BRANCH}"
+
+          INDEX_OWNER="${INDEX_REPO%%/*}"
+          if [[ "${INDEX_REPO}" == "${INDEX_UPSTREAM}" ]]; then
+            PR_HEAD="${BRANCH}"
+          else
+            PR_HEAD="${INDEX_OWNER}:${BRANCH}"
+          fi
+          gh pr create --repo "${INDEX_UPSTREAM}" --head "${PR_HEAD}" --base main \
+            --title "chore(index): ${FOLDER_ID}@${PKG_VERSION}" \
+            --body "Automated release of \`${NPM_NAME}@${PKG_VERSION}\` from \`${{ github.repository }}\`." || true
+
+      - name: Summary
+        if: always()
+        run: |
+          {
+            echo "### Release Summary"
+            echo "- version: \`${{ steps.bump.outputs.version }}\`"
+            echo "- trigger: \`${{ github.event_name }}\`"
+            echo "- ref: \`${{ github.ref }}\`"
+            echo "- commit: \`${{ github.sha }}\`"
+          } >> "$GITHUB_STEP_SUMMARY"
