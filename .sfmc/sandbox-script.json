@@ -1,0 +1,145 @@
+{
+  "schemaVersion": 1,
+  "nodes": [
+    {
+      "id": "n1",
+      "type": "stimulus",
+      "position": {
+        "x": 40,
+        "y": 120
+      },
+      "data": {
+        "kind": "player",
+        "title": "alice",
+        "detail": "op · overworld",
+        "props": {
+          "id": "player-alice",
+          "name": "alice",
+          "op": true,
+          "dimensionId": "minecraft:overworld",
+          "location": {
+            "x": 0,
+            "y": 64,
+            "z": 0
+          }
+        },
+        "objectId": "player-alice"
+      },
+      "measured": {
+        "width": 168,
+        "height": 101
+      }
+    },
+    {
+      "id": "n4",
+      "type": "stimulus",
+      "position": {
+        "x": 580,
+        "y": 130
+      },
+      "data": {
+        "kind": "tick",
+        "title": "Tick ×5",
+        "detail": "n = 5",
+        "n": 5
+      },
+      "measured": {
+        "width": 168,
+        "height": 82
+      }
+    },
+    {
+      "id": "n5",
+      "type": "stimulus",
+      "position": {
+        "x": 820,
+        "y": 130
+      },
+      "data": {
+        "kind": "assert",
+        "assertKind": "sceneExists",
+        "title": "场景存在",
+        "detail": "Player · name=alice",
+        "targetKind": "Player",
+        "targetName": "alice"
+      },
+      "measured": {
+        "width": 168,
+        "height": 83
+      }
+    },
+    {
+      "id": "n1785500230357",
+      "type": "stimulus",
+      "position": {
+        "x": 292.558304798677,
+        "y": 134.35651759499797
+      },
+      "data": {
+        "kind": "call",
+        "title": "sendMessage",
+        "detail": "player-alice.sendMessage(1)",
+        "method": "sendMessage",
+        "argsJson": "[null]",
+        "targetId": "player-alice",
+        "targetKind": "Player"
+      },
+      "measured": {
+        "width": 173,
+        "height": 82
+      },
+      "selected": true,
+      "dragging": false
+    }
+  ],
+  "edges": [
+    {
+      "id": "e4-5",
+      "source": "n4",
+      "target": "n5",
+      "data": {
+        "kind": "pass"
+      }
+    },
+    {
+      "labelStyle": {
+        "fill": "var(--vs-muted)",
+        "fontSize": 11
+      },
+      "labelBgStyle": {
+        "fill": "var(--vs-side)"
+      },
+      "labelBgPadding": [
+        4,
+        2
+      ],
+      "labelBgBorderRadius": 2,
+      "source": "n1",
+      "target": "n1785500230357",
+      "id": "e-n1-n1785500230357",
+      "data": {
+        "kind": "pass"
+      }
+    },
+    {
+      "labelStyle": {
+        "fill": "var(--vs-muted)",
+        "fontSize": 11
+      },
+      "labelBgStyle": {
+        "fill": "var(--vs-side)"
+      },
+      "labelBgPadding": [
+        4,
+        2
+      ],
+      "labelBgBorderRadius": 2,
+      "source": "n1785500230357",
+      "target": "n4",
+      "id": "e-n1785500230357-n4",
+      "data": {
+        "kind": "pass"
+      }
+    }
+  ]
+}
