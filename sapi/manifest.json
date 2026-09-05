@@ -3,7 +3,6 @@
   "schemaVersion": 2,
   "id": "feature-qq-link",
   "name": "QQ绑定与入服",
-  "type": "feature",
   "configKey": "qq_link",
   "requires": [],
   "permissions": ["config:read:qq_link"],
