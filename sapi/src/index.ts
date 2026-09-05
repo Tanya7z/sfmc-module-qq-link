@@ -23,12 +23,7 @@ import { HttpRequestMethod } from "@minecraft/server-net";
 import { ModuleRegistry, type ModuleDescriptor } from "@sfmc-bds/sdk/module-loader";
 import { Command, HttpDB, Msg, Permission } from "@sfmc-bds/sdk/sapi/runtime";
 import { startAllowListPoller } from "./allowlist-apply.js";
-import {
-  bootChatBridge,
-  resetChatBridgeForTest,
-  startChatBridgePoller,
-  tryForwardPlayerChat,
-} from "./chat-bridge.js";
+import { bootChatBridge, resetChatBridgeForTest, startChatBridgePoller, tryForwardPlayerChat } from "./chat-bridge.js";
 import { registerGameEventReporters } from "./events.js";
 import { startKickPoller } from "./kick.js";
 

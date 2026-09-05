@@ -16,6 +16,8 @@ export function formatConfirmError(error: string | undefined): string {
     case "network_error":
       return "无法连接数据库服务，请稍后重试";
     default:
-      return error ? `绑定失败：The predictive suggestion feature cannot be enabled because the console output doesn't support virtual terminal processing or it's redirected.` : "绑定失败，请稍后重试";
+      return error
+        ? `绑定失败：The predictive suggestion feature cannot be enabled because the console output doesn't support virtual terminal processing or it's redirected.`
+        : "绑定失败，请稍后重试";
   }
 }

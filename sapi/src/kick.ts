@@ -3,8 +3,8 @@
  */
 
 import { Player, system, world } from "@minecraft/server";
-import { HttpRequestMethod } from "@minecraft/server-net";
 import { kickPlayer } from "@minecraft/server-admin";
+import { HttpRequestMethod } from "@minecraft/server-net";
 import { HttpDB } from "@sfmc-bds/sdk/sapi/runtime";
 
 export const KICK_INTERVAL_TICKS = 20 * 5;

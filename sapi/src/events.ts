@@ -36,9 +36,11 @@ let reporter: QqEventReporter = (ev) => {
 
 /** 单测可注入 spy；cleanup 时 reset */
 export function setQqEventReporter(fn: QqEventReporter | null): void {
-  reporter = fn ?? ((ev) => {
-    void postQqEvent(ev);
-  });
+  reporter =
+    fn ??
+    ((ev) => {
+      void postQqEvent(ev);
+    });
 }
 
 function report(ev: QqGameEvent): void {
@@ -57,10 +59,12 @@ type Sub = { unsubscribe: (cb: unknown) => void };
 
 let onSpawn: ((ev: { player?: Player; initialSpawn?: boolean }) => void) | null = null;
 let onLeave: ((ev: { playerName?: string; playerId?: string }) => void) | null = null;
-let onDie: ((ev: {
-  deadEntity?: { typeId?: string; name?: string };
-  damageSource?: { cause?: string; damagingEntity?: { name?: string; typeId?: string } };
-}) => void) | null = null;
+let onDie:
+  | ((ev: {
+      deadEntity?: { typeId?: string; name?: string };
+      damageSource?: { cause?: string; damagingEntity?: { name?: string; typeId?: string } };
+    }) => void)
+  | null = null;
 
 /**
  * 订阅世界事件；返回取消订阅函数。

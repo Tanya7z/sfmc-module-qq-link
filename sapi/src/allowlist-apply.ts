@@ -3,8 +3,8 @@
  */
 
 import { system, world } from "@minecraft/server";
-import { HttpRequestMethod } from "@minecraft/server-net";
 import { dedicatedServer } from "@minecraft/server-admin";
+import { HttpRequestMethod } from "@minecraft/server-net";
 import { HttpDB } from "@sfmc-bds/sdk/sapi/runtime";
 
 /** 轮询间隔（tick） */

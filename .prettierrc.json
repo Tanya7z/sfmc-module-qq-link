@@ -6,6 +6,6 @@
   "bracketSpacing": true,
   "arrowParens": "always",
   "printWidth": 120,
-  "endOfLine": "crlf",
+  "endOfLine": "auto",
   "plugins": ["prettier-plugin-organize-imports"]
 }
