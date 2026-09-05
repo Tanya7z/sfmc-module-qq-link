@@ -5,7 +5,7 @@
  * fire-and-forget：网络失败忽略。
  */
 
-import { world } from "@minecraft/server";
+import { world, type Player } from "@minecraft/server";
 import { HttpRequestMethod } from "@minecraft/server-net";
 import { HttpDB } from "@sfmc-bds/sdk/sapi/runtime";
 

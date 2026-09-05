@@ -17,7 +17,7 @@
   "scripts": {
     "build": "npm run typecheck",
     "typecheck": "tsc --noEmit -p sapi/tsconfig.json",
-    "test": "node --test --import @sfmc-bds/sdk/testing/minecraft-loader --import tsx/esm test/*.test.ts",
+    "test": "node --test --import tsx/esm test/*.test.ts",
     "lint": "eslint \"sapi/**/*.ts\" \"test/**/*.ts\"",
     "format": "prettier --write ."
   },
@@ -28,7 +28,7 @@
     "@minecraft/server-ui": "2.2.0-beta.1.26.40-preview.30",
     "@minecraft/vanilla-data": "1.26.40-preview.30",
     "@sfmc-bds/eslint-plugin": "^0.1.0",
-    "@sfmc-bds/sdk": "file:../ScriptsForMinecraftServer/modules/sdk/@sfmc-sdk",
+    "@sfmc-bds/sdk": "^0.2.0-beta.10",
     "@types/node": "^22.13.0",
     "@typescript-eslint/eslint-plugin": "^8.64.0",
     "@typescript-eslint/parser": "^8.64.0",
