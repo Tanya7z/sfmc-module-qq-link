@@ -201,12 +201,13 @@ function cleanup(): void {
   }
 }
 
+registerCommands();
+
 export const DESCRIPTOR: ModuleDescriptor = {
   id: MODULE_ID,
   afterWorldLoad: false,
   lifecycle: {
     registerPermissions,
-    registerCommands,
     registerEvents,
     init,
     cleanup,
