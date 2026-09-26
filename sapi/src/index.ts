@@ -24,7 +24,7 @@ import { ModuleRegistry, type ModuleDescriptor } from "@sfmc-bds/sdk/module-load
 import { Command, HttpDB, Msg, Permission } from "@sfmc-bds/sdk/sapi/runtime";
 import { startAllowListPoller } from "./allowlist-apply.js";
 import { bootChatBridge, resetChatBridgeForTest, startChatBridgePoller, tryForwardPlayerChat } from "./chat-bridge.js";
-import { registerGameEventReporters } from "./events.js";
+import { registerGameEventReporters, startLiveStatusReporter } from "./events.js";
 import { startKickPoller } from "./kick.js";
 
 /** 与 sapi/manifest.json 的 id 一致 */
@@ -161,6 +161,7 @@ function registerEvents(): void {
 function init(): void {
   intervalIds.push(startAllowListPoller());
   intervalIds.push(startKickPoller());
+  intervalIds.push(startLiveStatusReporter());
   // 异步解析 bridge_channel_id 后再开轮询
   system.run(() => {
     void (async () => {

@@ -5,7 +5,7 @@
  * fire-and-forget：网络失败忽略。
  */
 
-import { world, type Player } from "@minecraft/server";
+import { system, world, type Player } from "@minecraft/server";
 import { HttpRequestMethod } from "@minecraft/server-net";
 import { HttpDB } from "@sfmc-bds/sdk/sapi/runtime";
 
@@ -20,14 +20,50 @@ export type QqEventReporter = (ev: QqGameEvent) => void;
 /** 默认：POST /api/sfmc/qq/events */
 export async function postQqEvent(ev: QqGameEvent): Promise<void> {
   try {
-    await HttpDB.typedRequest(HttpRequestMethod.POST, "/api/sfmc/qq/events", {
+    const result = await HttpDB.typedRequest(HttpRequestMethod.POST, "/api/sfmc/qq/events", {
       type: ev.type,
       player: ev.player,
       cause: ev.cause,
     });
+    if (!result.ok) warnReportFailure(`事件 HTTP ${result.status}`);
   } catch {
-    /* ignore */
+    warnReportFailure("事件请求异常");
   }
+}
+
+let lastReportWarning = 0;
+function warnReportFailure(reason: string): void {
+  const now = Date.now();
+  if (now - lastReportWarning < 60_000) return;
+  lastReportWarning = now;
+  console.warn(`[qq-link] ${reason}，请检查 db-server 连接与鉴权`);
+}
+
+/** 实时玩家列表与世界信息每 20 秒同步，供 QQ 查服使用。 */
+export function startLiveStatusReporter(): number {
+  let busy = false;
+  const report = () => {
+    if (busy) return;
+    let players: string[];
+    let day: number;
+    let difficulty: string;
+    try {
+      players = world.getAllPlayers().map((player) => player.name);
+      day = world.getDay();
+      difficulty = String(world.getDifficulty());
+    } catch {
+      return;
+    }
+    busy = true;
+    void HttpDB.typedRequest(HttpRequestMethod.POST, "/api/sfmc/status/live", {
+      players, day, difficulty,
+    }).then((result) => {
+      if (!result.ok) warnReportFailure(`实时状态 HTTP ${result.status}`);
+    }).catch(() => warnReportFailure("实时状态请求异常"))
+      .finally(() => { busy = false; });
+  };
+  system.run(report);
+  return system.runInterval(report, 400);
 }
 
 let reporter: QqEventReporter = (ev) => {
