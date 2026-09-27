@@ -12,6 +12,7 @@
   },
   "files": [
     "sapi",
+    "configs-default",
     "scripts",
     "test",
     "README.md",
