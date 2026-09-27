@@ -3,13 +3,14 @@
  *
  * 流程（绑定）：
  *   1. QQ 侧发「绑定」取得短码
- *   2. 游戏内 !bind → 等待态 → 下一条聊天码 → confirm
+ *   2. 游戏内 /c:bind → 等待态 → 下一条聊天码 → confirm
  *
- * 流程（入服）：
- *   QQ 审批通过 → db approved → 本模块轮询 apply-queue → dedicatedServer.allowList.add
+ * 流程（游玩门槛）：
+ *   关闭原版 allow-list。未绑定可进服，但是访客且不能移动，聊天栏提示绑定。
+ *   QQ 绑定成功写入绑定表（自有白名单）后解除限制。
  *
  * 流程（踢人）：
- *   QQ「踢人」→ admin action-queue → kickPlayer
+ *   QQ「踢人」→ admin action-queue → 服务端 kick 命令
  *
  * 流程（事件）：
  *   join/leave/death → POST /api/sfmc/qq/events（db-server 聚合推群）
@@ -22,7 +23,8 @@ import { Player, system, world } from "@minecraft/server";
 import { HttpRequestMethod } from "@minecraft/server-net";
 import { ModuleRegistry, type ModuleDescriptor } from "@sfmc-bds/sdk/module-loader";
 import { Command, HttpDB, Msg, Permission } from "@sfmc-bds/sdk/sapi/runtime";
-import { startAllowListPoller } from "./allowlist-apply.js";
+import { startAccountProfileReporter } from "./account-profile.js";
+import { markBoundAndRelease, startPlayGate, stopPlayGate } from "./play-gate.js";
 import { bootChatBridge, resetChatBridgeForTest, startChatBridgePoller, tryForwardPlayerChat } from "./chat-bridge.js";
 import { registerGameEventReporters, startLiveStatusReporter } from "./events.js";
 import { startKickPoller } from "./kick.js";
@@ -84,13 +86,13 @@ function beginWait(player: Player): void {
   const id = player.id;
   clearPending(id);
   // 跨包 @minecraft/server 类型身份不一致（file: SDK vs 本仓），运行时同一 stub
-  Msg.info("请在 60 秒内发送绑定码（纯数字，不要带 !）", player as never);
+  Msg.info("请在 60 秒内发送绑定码", player as never);
   const timeoutId = system.runTimeout(() => {
     if (!pendingByPlayer.has(id)) return;
     pendingByPlayer.delete(id);
     try {
       const online = world.getAllPlayers().find((p) => p.id === id);
-      if (online) Msg.warning("绑定等待已超时，请重新输入 !bind", online as never);
+      if (online) Msg.warning("绑定等待已超时，请重新输入 /c:bind", online as never);
     } catch {
       /* ignore */
     }
@@ -130,18 +132,22 @@ function registerEvents(): void {
 
       const code = raw.replace(/\s+/g, "");
       if (!/^\d{4,8}$/.test(code)) {
-        Msg.error("绑定码应为 4–8 位数字，请重新 !bind 后再发", player as never);
+        Msg.error("绑定码应为 4–8 位数字，请重新 /c:bind 后再发", player as never);
         return;
       }
 
       system.run(() => {
         void (async () => {
           const result = await postBindConfirm(player, code);
-          if (result.ok) {
-            Msg.success("QQ 绑定成功", player as never);
-          } else {
-            Msg.error(formatConfirmError(result.error), player as never);
-          }
+          // await 之后回到脚本线程再改权限和发消息。
+          system.run(() => {
+            if (result.ok) {
+              markBoundAndRelease(player);
+              Msg.success("QQ 绑定成功，已加入白名单，可以自由活动", player as never);
+            } else {
+              Msg.error(formatConfirmError(result.error), player as never);
+            }
+          });
         })();
       });
       return;
@@ -159,9 +165,10 @@ function registerEvents(): void {
 }
 
 function init(): void {
-  intervalIds.push(startAllowListPoller());
+  startPlayGate();
   intervalIds.push(startKickPoller());
   intervalIds.push(startLiveStatusReporter());
+  intervalIds.push(startAccountProfileReporter());
   // 异步解析 bridge_channel_id 后再开轮询
   system.run(() => {
     void (async () => {
@@ -172,6 +179,7 @@ function init(): void {
 }
 
 function cleanup(): void {
+  stopPlayGate();
   for (const id of [...pendingByPlayer.keys()]) {
     clearPending(id);
   }

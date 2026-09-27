@@ -7,6 +7,13 @@ import { readFileSync } from "node:fs";
 import { describe, it } from "node:test";
 import { fileURLToPath } from "node:url";
 
+import {
+  BIND_GATE_PROMPT,
+  heldRoleFromLevel,
+  movedTooFar,
+  permissionCommand,
+  shouldPrompt,
+} from "../sapi/src/play-gate-policy.ts";
 import { formatConfirmError } from "../sapi/src/util.ts";
 
 const MANIFEST_PATH = fileURLToPath(new URL("../sapi/manifest.json", import.meta.url));
@@ -38,5 +45,19 @@ describe("qq-link metadata & logic", () => {
     assert.match(formatConfirmError("player_already_bound"), /已绑定/);
     assert.match(formatConfirmError("network_error"), /无法连接/);
     assert.match(formatConfirmError("unknown_x"), /绑定失败/);
+  });
+
+  it("绑定白名单：操作员还原，其余成员，未绑定提示与走位阈值", () => {
+    assert.equal(heldRoleFromLevel(2), "operator");
+    assert.equal(heldRoleFromLevel(1), "member");
+    assert.equal(heldRoleFromLevel(0), "member");
+    assert.equal(permissionCommand('Steve "x"', "visitor"), 'permission set "Steve x" visitor');
+    assert.equal(permissionCommand("Alex", "operator"), 'permission set "Alex" operator');
+    assert.equal(shouldPrompt(0, 14_999), false);
+    assert.equal(shouldPrompt(0, 15_000), true);
+    assert.equal(movedTooFar(0.1, 0, 0), false);
+    assert.equal(movedTooFar(0.3, 0, 0), true);
+    assert.match(BIND_GATE_PROMPT, /\/c:bind/);
+    assert.match(BIND_GATE_PROMPT, /访客/);
   });
 });

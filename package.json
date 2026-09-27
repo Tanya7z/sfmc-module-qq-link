@@ -1,8 +1,11 @@
 {
   "name": "@sfmc-bds/module-qq-link",
   "version": "0.1.0",
+  "packageManager": "pnpm@10.8.0",
   "type": "module",
   "description": "SFMC QQ↔MC 绑定 + 入服白名单生效 + 踢人 + 事件上报 + 聊天互通",
+  "license": "ISC",
+  "repository": "git+https://github.com/Tanya7z/sfmc-module-qq-link.git",
   "main": "sapi/src/index.ts",
   "exports": {
     ".": "./sapi/src/index.ts"
@@ -15,7 +18,7 @@
     "LICENSE"
   ],
   "scripts": {
-    "build": "npm run typecheck",
+    "build": "pnpm run typecheck",
     "typecheck": "tsc --noEmit -p sapi/tsconfig.json",
     "test": "node --test --import tsx/esm test/*.test.ts",
     "lint": "eslint \"sapi/**/*.ts\" \"test/**/*.ts\"",
@@ -23,12 +26,11 @@
   },
   "devDependencies": {
     "@minecraft/server": "2.11.0-beta.1.26.51-stable",
-    "@minecraft/server-admin": "1.0.0-beta.1.26.40-preview.30",
     "@minecraft/server-net": "1.0.0-beta.11940b24",
     "@minecraft/server-ui": "2.3.0-beta.1.26.51-stable",
     "@minecraft/vanilla-data": "1.26.51",
-    "@sfmc-bds/eslint-plugin": "^0.1.0",
-    "@sfmc-bds/sdk": "^0.2.0-beta.10",
+    "@sfmc-bds/eslint-plugin": "0.1.1-beta.3",
+    "@sfmc-bds/sdk": "0.2.0-beta.18",
     "@types/node": "^22.13.0",
     "@typescript-eslint/eslint-plugin": "^8.64.0",
     "@typescript-eslint/parser": "^8.64.0",
@@ -40,6 +42,10 @@
   },
   "peerDependencies": {
     "@sfmc-bds/sdk": ">=0.2.0"
+  },
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
   },
   "engines": {
     "node": ">=22.13.0"
