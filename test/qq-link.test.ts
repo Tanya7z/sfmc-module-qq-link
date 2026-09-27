@@ -44,7 +44,7 @@ describe("qq-link metadata & logic", () => {
     assert.match(formatConfirmError("qq_already_bound"), /已绑定/);
     assert.match(formatConfirmError("player_already_bound"), /已绑定/);
     assert.match(formatConfirmError("network_error"), /无法连接/);
-    assert.match(formatConfirmError("unknown_x"), /绑定失败/);
+    assert.equal(formatConfirmError("unknown_x"), "绑定失败，请稍后重试");
   });
 
   it("绑定白名单：操作员还原，其余成员，未绑定提示与走位阈值", () => {
