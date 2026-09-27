@@ -1,8 +1,8 @@
 {
-  "$schema": "https://raw.githubusercontent.com/DogeLakeDev/ScriptsForMinecraftServer/main/modules/sdk/@sfmc-sdk/schemas/sapi-manifest.v2.schema.json",
+  "$schema": "https://cdn.jsdelivr.net/gh/DogeLakeDev/ScriptsForMinecraftServer@main/modules/sdk/@sfmc-sdk/schemas/sapi-manifest.v2.schema.json",
   "schemaVersion": 2,
   "id": "feature-qq-link",
-  "name": "QQ绑定与入服",
+  "name": "QQLink",
   "configKey": "qq_link",
   "requires": [],
   "permissions": ["config:read:qq_link"],

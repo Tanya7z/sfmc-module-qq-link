@@ -1,9 +1,8 @@
 /**
- * kick.ts — 消费踢人队列，调用 @minecraft/server-admin kickPlayer
+ * kick.ts — 消费踢人队列，在服务端上下文执行 kick 命令
  */
 
 import { Player, system, world } from "@minecraft/server";
-import { kickPlayer } from "@minecraft/server-admin";
 import { HttpRequestMethod } from "@minecraft/server-net";
 import { HttpDB } from "@sfmc-bds/sdk/sapi/runtime";
 
@@ -57,7 +56,21 @@ export function startKickPoller(): number {
           continue;
         }
         try {
-          kickPlayer(player, reason);
+          const safeName = player.name.replace(/["\r\n]/g, "").trim();
+          const safeReason = reason.replace(/[\x00-\x1f]/g, " ").trim();
+          if (!safeName) throw new Error("invalid_player_name");
+          await new Promise<void>((resolve, reject) => {
+            system.run(() => {
+              try {
+                world.getDimension("overworld").runCommand(
+                  `kick "${safeName}" ${safeReason || "QQ 管理员踢出"}`,
+                );
+                resolve();
+              } catch (error) {
+                reject(error);
+              }
+            });
+          });
           await reportActionDone(id, true);
         } catch (e) {
           await reportActionDone(id, false, (e as Error).message || "kick_failed");
