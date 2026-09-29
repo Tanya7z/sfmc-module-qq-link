@@ -3,7 +3,7 @@
   "version": "0.1.1",
   "packageManager": "pnpm@10.8.0",
   "type": "module",
-  "description": "SFMC QQ↔MC 绑定 + 入服白名单生效 + 踢人 + 事件上报 + 聊天互通",
+  "description": "已归档。维护副本在平台 modules/packages/qq-link；本包不再提供踢人或 bridge_channel_id 聊天互通。",
   "license": "ISC",
   "repository": "git+https://github.com/Tanya7z/sfmc-module-qq-link.git",
   "main": "sapi/src/index.ts",
