@@ -45,9 +45,9 @@ SFMC QQ↔MC 身份绑定 + 入服白名单生效 + 踢人（独立作者仓）�
 ## 开发
 
 ```bash
-npm i
-npm run typecheck
-npm test
+pnpm install --frozen-lockfile
+pnpm run typecheck
+pnpm run test
 ```
 
 联调：

@@ -132,7 +132,7 @@ function main() {
   console.log(`\n[rename] 完成。新 id: ${folderId}（manifest id: ${logicalId}）`);
   console.log(`[rename] npm: ${pkgName}`);
   console.log("[rename] 接下来:");
-  console.log("          npm install && npm run typecheck && npm test");
+  console.log("          pnpm install --frozen-lockfile && pnpm run typecheck && pnpm run test");
   console.log(`          sfmc mod install ${folderId} --from dir:${ROOT} --link`);
   console.log("          （在 SFMC 工作目录执行；扩展也可设 sfmc.root 后 Start Watch）");
 }
